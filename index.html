@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#111111">
+<title>Voltage</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="app-header">
+  <h1 class="brand">Voltage</h1>
+  <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme">◐</button>
+</header>
+
+<!-- Read-only shared summary view (shown only when URL has a #s= hash) -->
+<main id="shareView" class="share-view" hidden>
+  <h2 class="share-title">Hostel bill split — <span id="shMonth"></span></h2>
+  <div class="big-num accent"><span id="shTotal"></span> <span class="unit">Rs</span></div>
+  <p class="quiet">my total share for the month</p>
+  <dl class="share-lines">
+    <div><dt>My scooty units</dt><dd id="shUnits"></dd></div>
+    <div><dt>Marginal rate</dt><dd id="shRate"></dd></div>
+    <div><dt>My scooty cost</dt><dd id="shCost"></dd></div>
+    <div><dt>Remaining bill</dt><dd id="shRemaining"></dd></div>
+    <div><dt>Per resident</dt><dd id="shPer"></dd></div>
+  </dl>
+  <p class="quiet" id="shNote"></p>
+</main>
+
+<main id="appView">
+<nav class="tabs" role="tablist">
+  <button role="tab" data-tab="charge" aria-selected="true">Charge</button>
+  <button role="tab" data-tab="bill" aria-selected="false">Bill</button>
+  <button role="tab" data-tab="saved" aria-selected="false">Saved</button>
+  <button role="tab" data-tab="settings" aria-selected="false">Settings</button>
+</nav>
+
+<!-- CHARGE -->
+<section id="tab-charge" class="tab-panel" role="tabpanel">
+  <div class="field-row">
+    <label>Battery % now
+      <input id="chFrom" type="number" inputmode="decimal" min="0" max="100" step="1">
+    </label>
+    <label>Charge up to %
+      <input id="chTo" type="number" inputmode="decimal" min="0" max="100" step="1">
+    </label>
+  </div>
+  <label>Distance since last charge (km, optional)
+    <input id="chKm" type="number" inputmode="decimal" min="0" step="0.1" placeholder="leave blank if unknown">
+  </label>
+  <label id="chMeasuredWrap" hidden>Meter reading for this charge (kWh)
+    <input id="chMeasured" type="number" inputmode="decimal" min="0" step="0.01">
+  </label>
+  <p id="chWarn" class="warn" hidden></p>
+
+  <div class="result-block">
+    <div class="big-num"><span id="chUnits">–</span> <span class="unit">kWh</span> <span id="chEstBadge" class="badge" hidden>estimated</span></div>
+    <p class="quiet">units this charge (from the meter)</p>
+    <div class="big-num accent"><span id="chCost">–</span> <span class="unit">Rs</span></div>
+    <p class="quiet">cost at marginal rate (<span id="chRateEcho">–</span> Rs/kWh)</p>
+    <dl class="mini-lines">
+      <div><dt>Energy into battery</dt><dd id="chBattery">–</dd></div>
+      <div><dt>Loss as heat</dt><dd id="chLoss">–</dd></div>
+      <div><dt>One full charge costs</dt><dd id="chFullCost">–</dd></div>
+    </dl>
+  </div>
+  <button id="chSave" class="primary">Save charge</button>
+  <button id="chShowLog" class="ghost">View log</button>
+</section>
+
+<!-- LOG -->
+<section id="tab-log" class="tab-panel" hidden>
+  <button id="logBack" class="ghost">← Back to Charge</button>
+  <h2>Charge log</h2>
+  <button id="logExport" class="ghost">Export CSV</button>
+  <div id="logList"></div>
+</section>
+
+<!-- BILL -->
+<section id="tab-bill" class="tab-panel" hidden>
+  <label>Month
+    <input id="blMonth" type="month">
+  </label>
+  <div class="field-row">
+    <label>Total hostel bill (Rs)
+      <input id="blTotal" type="number" inputmode="decimal" min="0" step="1">
+    </label>
+    <label>Total units on bill (kWh)
+      <input id="blUnits" type="number" inputmode="decimal" min="0" step="1">
+    </label>
+  </div>
+  <div class="field-row">
+    <label>Residents sharing
+      <input id="blResidents" type="number" inputmode="decimal" min="1" step="1">
+    </label>
+    <label>Marginal rate (Rs/kWh)
+      <input id="blRate" type="number" inputmode="decimal" min="0" step="0.01">
+    </label>
+  </div>
+  <p id="blWarn" class="warn" hidden></p>
+
+  <div class="result-block" id="blStatement">
+    <div class="big-num accent"><span id="blMyShare">–</span> <span class="unit">Rs</span></div>
+    <p class="quiet">my total share this month</p>
+    <dl class="mini-lines">
+      <div><dt>My scooty units <span id="blEstBadge" class="badge" hidden>estimated</span></dt><dd id="blMyUnits">–</dd></div>
+      <div><dt>My scooty cost</dt><dd id="blMyCost">–</dd></div>
+      <div><dt>Remaining bill</dt><dd id="blRemaining">–</dd></div>
+      <div><dt>Per resident</dt><dd id="blPer">–</dd></div>
+      <div><dt>Bill average rate</dt><dd id="blAvgRate">–</dd></div>
+    </dl>
+    <p class="explain">My scooty units are extra load on top of the hostel's normal usage, so they are billed at the top-slab rate of <strong><span id="blRateEcho">–</span> Rs/kWh</strong> — I pay the full marginal cost of my charging, and the rest of the bill is split equally.</p>
+  </div>
+  <button id="blSave" class="primary">Save bill month</button>
+  <button id="blShare" class="ghost">Share summary</button>
+  <button id="blCopy" class="ghost">Copy as text</button>
+  <p id="blShareMsg" class="quiet" hidden></p>
+</section>
+
+<!-- SAVED -->
+<section id="tab-saved" class="tab-panel" hidden>
+  <div class="result-block">
+    <div class="big-num accent"><span id="svNet">–</span> <span class="unit">Rs</span></div>
+    <p class="quiet">net saved vs petrol, lifetime</p>
+    <dl class="mini-lines">
+      <div><dt>Petrol cost avoided</dt><dd id="svPetrol">–</dd></div>
+      <div><dt>Electricity spent</dt><dd id="svElec">–</dd></div>
+      <div><dt>Electric per 100 km</dt><dd id="svE100">–</dd></div>
+      <div><dt>Petrol per 100 km</dt><dd id="svP100">–</dd></div>
+    </dl>
+    <p id="svExcluded" class="quiet" hidden></p>
+  </div>
+
+  <h2>Per month</h2>
+  <div id="svMonths"></div>
+
+  <h2>Petrol bike mileage</h2>
+  <label>Mileage (km/L)
+    <input id="svMileage" type="number" inputmode="decimal" min="1" step="0.1">
+  </label>
+
+  <h2>Petrol price history</h2>
+  <div class="field-row">
+    <label>Date
+      <input id="ppDate" type="date">
+    </label>
+    <label>Price (Rs/L)
+      <input id="ppPrice" type="number" inputmode="decimal" min="0" step="0.01">
+    </label>
+  </div>
+  <button id="ppAdd" class="primary">Add price</button>
+  <div id="ppList"></div>
+</section>
+
+<!-- SETTINGS -->
+<section id="tab-settings" class="tab-panel" hidden>
+  <h2>Scooty</h2>
+  <div class="field-row">
+    <label>Battery voltage (V)
+      <input id="stV" type="number" inputmode="decimal" min="1" step="1">
+    </label>
+    <label>Battery capacity (Ah)
+      <input id="stAh" type="number" inputmode="decimal" min="1" step="0.1">
+    </label>
+  </div>
+  <div class="field-row">
+    <label>Charger efficiency (%)
+      <input id="stEff" type="number" inputmode="decimal" min="50" max="100" step="1">
+    </label>
+    <label>Real range, full charge (km)
+      <input id="stRange" type="number" inputmode="decimal" min="1" step="1">
+    </label>
+  </div>
+  <label>Motor rating (W) — reference only, never used in any calculation
+    <input id="stMotor" type="number" inputmode="decimal" min="0" step="50">
+  </label>
+
+  <h2>Energy input mode</h2>
+  <label class="radio"><input type="radio" name="mode" value="battery"> Battery rating — V × Ah ÷ 1000</label>
+  <label class="radio"><input type="radio" name="mode" value="charger"> Charger label — output V × A × hours ÷ 1000</label>
+  <label class="radio"><input type="radio" name="mode" value="measured"> Measured (recommended) — type the plug-in meter reading per charge</label>
+
+  <div id="stChargerWrap" hidden>
+    <div class="field-row">
+      <label>Charger output (V)
+        <input id="stChV" type="number" inputmode="decimal" min="1" step="0.1">
+      </label>
+      <label>Charger output (A)
+        <input id="stChA" type="number" inputmode="decimal" min="0.1" step="0.1">
+      </label>
+    </div>
+    <label>Hours for a full charge
+      <input id="stChH" type="number" inputmode="decimal" min="0.1" step="0.1">
+    </label>
+  </div>
+
+  <p class="hint">Measured mode is the only mode whose numbers are defensible to the hostel owner — an estimate can be argued with, a plug-in meter reading cannot.</p>
+
+  <h2>Data</h2>
+  <button id="stWipe" class="danger">Wipe all data</button>
+</section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
