@@ -187,6 +187,7 @@ function showTab(name) {
   document.querySelectorAll(".tabs [role=tab]").forEach((b) => {
     b.setAttribute("aria-selected", String(b.dataset.tab === name));
   });
+  if (name === "charge") { $("chRate").value = S.lastRate; renderCharge(); }
   if (name === "bill") renderBill();
   if (name === "saved") renderSaved();
   if (name === "log") renderLog();
@@ -251,6 +252,11 @@ $("stWipe").addEventListener("click", () => {
 
 $("chFrom").value = S.currentPct;
 $("chTo").value = 100;
+$("chRate").value = S.lastRate;
+$("chRate").addEventListener("input", () => {
+  const v = parseFloat($("chRate").value);
+  if (isFinite(v) && v >= 0) { S.lastRate = v; save(); renderCharge(); }
+});
 
 function chargeInputs() {
   return {
